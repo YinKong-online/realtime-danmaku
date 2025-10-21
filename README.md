@@ -21,7 +21,12 @@
 ![高并发弹幕](https://i.imgur.com/demo-screenshot2.png)
 
 ### 多端适配
-![移动端适配](https://i.imgur.com/demo-screenshot3.png)
+![移动端适配](例子弹幕项目实图.png)  
+
+> **说明：** 由于外部图片链接可能失效，这里使用项目中已有的本地图片。您也可以通过以下方式获取真实的移动端适配截图：
+> 1. 打开 http://localhost:3000 前端页面
+> 2. 使用浏览器开发者工具切换到移动端视图（F12 > 点击设备切换按钮）
+> 3. 截图并保存为 `移动端适配.png`，然后更新此README中的图片引用
 
 ### 在线演示视频
 [🎬 完整功能演示视频](https://www.youtube.com/watch?v=demo-video-link)
