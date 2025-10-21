@@ -15,7 +15,7 @@
 ## 🎥 演示截图/视频
 
 ### 实时弹幕效果
-![实时弹幕演示](https://i.imgur.com/demo-screenshot1.png)
+![实时弹幕演示](例子弹幕项目实图.png)
 
 ### 高并发场景
 ![高并发弹幕](https://i.imgur.com/demo-screenshot2.png)
