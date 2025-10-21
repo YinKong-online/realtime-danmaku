@@ -3,7 +3,16 @@
     <header class="header">
       <h1>实时互动弹幕系统</h1>
       <div class="room-info">
-        <span>房间ID: {{ roomId }}</span>
+        <div class="room-id-input-group">
+          <label>房间ID:</label>
+          <input 
+            v-model="roomId" 
+            @keyup.enter="changeRoom"
+            class="room-id-input"
+            placeholder="输入房间ID"
+          />
+          <button @click="changeRoom" class="change-room-btn">切换房间</button>
+        </div>
         <span>在线人数: {{ onlineCount }}</span>
       </div>
     </header>
@@ -467,6 +476,26 @@ const leaveRoom = () => {
   }
 }
 
+// 切换房间
+const changeRoom = () => {
+  if (!roomId.value.trim()) {
+    roomId.value = 'default-room'
+    return
+  }
+  
+  // 离开当前房间
+  leaveRoom()
+  
+  // 清空弹幕历史
+  danmakus.value = []
+  
+  // 加入新房间
+  setTimeout(() => {
+    joinRoom()
+    statusMessage.value = `已切换到房间: ${roomId.value}`
+  }, 100)
+}
+
 onMounted(() => {
   // 连接WebSocket
   // 注意：在生产环境中，需要将此地址修改为您实际部署的后端服务地址
@@ -590,7 +619,7 @@ body {
 }
 
 .header {
-  height: 60px;
+  height: 80px;
   background-color: #2a2a2a;
   display: flex;
   align-items: center;
@@ -598,6 +627,43 @@ body {
   padding: 0 20px;
   border-bottom: 1px solid #444;
   z-index: 10;
+}
+
+.room-id-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.room-id-input {
+  padding: 6px 12px;
+  background-color: #3a3a3a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  width: 200px;
+}
+
+.room-id-input:focus {
+  outline: none;
+  border-color: #4ECDC4;
+}
+
+.change-room-btn {
+  padding: 6px 16px;
+  background-color: #4ECDC4;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.change-room-btn:hover {
+  background-color: #45b7d1;
 }
 
 .header h1 {
