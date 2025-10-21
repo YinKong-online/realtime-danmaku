@@ -1,0 +1,56 @@
+{
+  "name": "danmaku-backend",
+  "version": "1.0.0",
+  "description": "高性能实时弹幕系统后端服务，支持WebSocket通信、消息队列、限流和多房间管理",
+  "main": "src/index.js",
+  "type": "module",
+  "keywords": [
+    "danmaku",
+    "socket.io",
+    "realtime",
+    "websocket",
+    "node.js",
+    "express",
+    "redis",
+    "mongodb"
+  ],
+  "author": "YinKong-online <1541310738@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YinKong-online/realtime-danmaku.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YinKong-online/realtime-danmaku/issues"
+  },
+  "homepage": "https://github.com/YinKong-online/realtime-danmaku#readme",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "node tests/run-db-tests.js",
+    "test:db": "node tests/run-db-tests.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "@socket.io/redis-adapter": "^8.2.1",
+    "redis": "^4.6.12",
+    "mongodb": "^6.3.0",
+    "pg": "^8.11.3",
+    "mysql2": "^3.7.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "nanoid": "^5.0.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3",
+    "mocha": "^10.2.0",
+    "chai": "^4.3.7",
+    "sinon": "^15.2.0",
+    "chai-as-promised": "^7.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

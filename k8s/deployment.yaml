@@ -1,0 +1,338 @@
+# 实时互动弹幕系统 Kubernetes 部署配置
+
+---
+# 命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: realtime-danmaku
+---
+  labels:
+    app: danmaku
+
+---
+# 后端服务部署
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: danmaku-backend
+  namespace: realtime-danmaku
+  labels:
+    app: danmaku
+    component: backend
+spec:
+  replicas: 3  # 根据需求调整副本数
+  selector:
+    matchLabels:
+      app: danmaku
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: danmaku
+        component: backend
+    spec:
+      containers:
+      - name: danmaku-backend
+        image: danmaku-backend:latest
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        env:
+        - name: PORT
+          value: "8000"
+        - name: REDIS_URL
+          value: "redis://danmaku-redis:6379"
+        - name: DB_TYPE
+          value: "mysql"
+        - name: MYSQL_HOST
+          value: "danmaku-mysql"
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: MYSQL_USER
+          value: "root"
+        - name: MYSQL_PASSWORD
+          value: "danmaku123"
+        - name: MYSQL_DATABASE
+          value: "danmaku_system"
+        - name: SOCKET_PING_TIMEOUT
+          value: "60000"
+        - name: SOCKET_PING_INTERVAL
+          value: "25000"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 15
+
+---
+# 后端服务服务
+apiVersion: v1
+kind: Service
+metadata:
+  name: danmaku-backend
+  namespace: realtime-danmaku
+  labels:
+    app: danmaku
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+  selector:
+    app: danmaku
+    component: backend
+
+---
+# 前端服务部署
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: danmaku-frontend
+  namespace: realtime-danmaku
+  labels:
+    app: danmaku
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: danmaku
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: danmaku
+        component: frontend
+    spec:
+      containers:
+      - name: danmaku-frontend
+        image: danmaku-frontend:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+
+---
+# 前端服务服务
+apiVersion: v1
+kind: Service
+metadata:
+  name: danmaku-frontend
+  namespace: danmaku-system
+  labels:
+    app: danmaku
+    component: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: danmaku
+    component: frontend
+
+---
+# Redis部署
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: danmaku-redis
+  namespace: danmaku-system
+  labels:
+    app: danmaku
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: danmaku
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: danmaku
+        component: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7.2-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /usr/local/etc/redis/redis.conf
+          subPath: redis.conf
+        command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+      volumes:
+      - name: redis-data
+        emptyDir: {}
+      - name: redis-config
+        configMap:
+          name: danmaku-redis-config
+
+---
+# Redis服务
+apiVersion: v1
+kind: Service
+metadata:
+  name: danmaku-redis
+  namespace: danmaku-system
+  labels:
+    app: danmaku
+    component: redis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+  selector:
+    app: danmaku
+    component: redis
+
+---
+# MySQL部署
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: danmaku-mysql
+  namespace: danmaku-system
+  labels:
+    app: danmaku
+    component: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: danmaku
+      component: mysql
+  template:
+    metadata:
+      labels:
+        app: danmaku
+        component: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "danmaku123"
+        - name: MYSQL_DATABASE
+          value: "danmaku_system"
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-data
+        emptyDir: {}
+
+---
+# MySQL服务
+apiVersion: v1
+kind: Service
+metadata:
+  name: danmaku-mysql
+  namespace: danmaku-system
+  labels:
+    app: danmaku
+    component: mysql
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: danmaku
+    component: mysql
+
+---
+# Redis ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: danmaku-redis-config
+  namespace: danmaku-system
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    port 6379
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    timeout 300
+    tcp-keepalive 300
+    daemonize no
+
+---
+# Ingress配置（可选）
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: danmaku-ingress
+  namespace: danmaku-system
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: realtime-danmaku.example.com  # 请替换为您实际的域名
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: danmaku-frontend
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: danmaku-backend
+            port:
+              number: 8000
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: danmaku-backend
+            port:
+              number: 8000

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>原生JavaScript弹幕组件示例</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    .example-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #333;
+    }
+    
+    .control-panel {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .danmaku-input {
+      flex: 1;
+      min-width: 300px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    
+    .danmaku-input:focus {
+      border-color: #1890ff;
+    }
+    
+    .danmaku-type {
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      outline: none;
+    }
+    
+    .send-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #1890ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .send-btn:hover {
+      background-color: #40a9ff;
+    }
+    
+    .control-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #52c41a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .control-btn:hover {
+      background-color: #73d13d;
+    }
+    
+    .content-area {
+      position: relative;
+      margin: 0 auto;
+      background-color: #f0f0f0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .content-image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    
+    .status-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .status-info p {
+      margin: 5px 0;
+    }
+    
+    #danmaku-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .control-panel {
+        flex-direction: column;
+      }
+      
+      .danmaku-input {
+        min-width: auto;
+        width: 100%;
+      }
+      
+      .content-area {
+        width: 100%;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="example-container">
+    <h1>原生JavaScript弹幕组件示例</h1>
+    
+    <div class="control-panel">
+      <input 
+        id="danmaku-text" 
+        placeholder="请输入弹幕内容" 
+        class="danmaku-input"
+      />
+      
+      <select id="danmaku-type" class="danmaku-type">
+        <option value="scroll">滚动</option>
+        <option value="top">顶部</option>
+        <option value="bottom">底部</option>
+      </select>
+      
+      <button id="send-btn" class="send-btn">发送</button>
+      
+      <button id="toggle-pause-btn" class="control-btn">暂停</button>
+      
+      <button id="clear-btn" class="control-btn">清空</button>
+    </div>
+    
+    <!-- 视频/内容区域 -->
+    <div class="content-area" id="content-area">
+      <img 
+        src="https://picsum.photos/800/450" 
+        alt="示例图片" 
+        class="content-image"
+      />
+      
+      <!-- 弹幕容器 -->
+      <div id="danmaku-container"></div>
+    </div>
+    
+    <div class="status-info">
+      <p>弹幕状态: <span id="status-text">播放中</span></p>
+      <p>已发送弹幕: <span id="count-text">0</span> 条</p>
+    </div>
+  </div>
+
+  <!-- 引入弹幕组件库 -->
+  <script type="module">
+    // 导入核心组件和工具
+    import { DanmakuCoreRenderer, platformAdaptors, autoDetectPlatform } from '../dist/danmaku-components.es.js'
+    
+    // 获取DOM元素
+    const danmakuContainer = document.getElementById('danmaku-container')
+    const contentArea = document.getElementById('content-area')
+    const danmakuText = document.getElementById('danmaku-text')
+    const danmakuType = document.getElementById('danmaku-type')
+    const sendBtn = document.getElementById('send-btn')
+    const togglePauseBtn = document.getElementById('toggle-pause-btn')
+    const clearBtn = document.getElementById('clear-btn')
+    const statusText = document.getElementById('status-text')
+    const countText = document.getElementById('count-text')
+    
+    // 状态变量
+    let renderer = null
+    let isPaused = false
+    let sentCount = 0
+    
+    // 检测平台
+    const platform = autoDetectPlatform()
+    const platformConfig = platformAdaptors[platform].defaultConfig
+    
+    // 初始化弹幕渲染器
+    function initRenderer() {
+      if (!danmakuContainer) return
+      
+      // 创建渲染器实例
+      renderer = new DanmakuCoreRenderer()
+      
+      // 获取内容区域大小
+      const { width, height } = contentArea.getBoundingClientRect()
+      
+      // 弹幕配置
+      const config = {
+        ...platformConfig,
+        containerWidth: width,
+        containerHeight: height,
+        channelCount: 8,
+        defaultFontSize: 20,
+        opacity: 0.8,
+        maxDisplayTime: 8000,
+        fullScreen: false,
+        showAdminBadge: true,
+        enableClickPause: true,
+        enableTouchPause: platform === 'mobile',
+        autoAdaptScreen: true,
+        
+        // 回调函数
+        onPause: handlePause,
+        onResume: handleResume,
+        onDanmakuClick: handleDanmakuClick,
+        onDanmakuEnd: handleDanmakuEnd,
+        onContainerClick: handleContainerClick
+      }
+      
+      // 初始化渲染器
+      renderer.init(danmakuContainer, config)
+    }
+    
+    // 发送弹幕
+    function sendDanmaku() {
+      if (!danmakuText.value.trim() || !renderer) return
+      
+      const newDanmaku = {
+        id: Date.now().toString(),
+        content: danmakuText.value.trim(),
+        type: danmakuType.value,
+        userId: 'user-' + Math.floor(Math.random() * 1000),
+        userName: '用户' + Math.floor(Math.random() * 1000),
+        color: getRandomColor(),
+        fontSize: 24,
+        isAdmin: Math.random() > 0.8, // 20%几率是管理员弹幕
+        timestamp: Date.now(),
+        avatar: `https://picsum.photos/32/32?random=${Math.floor(Math.random() * 1000)}`
+      }
+      
+      // 渲染弹幕
+      renderer.render(newDanmaku)
+      
+      // 清空输入框
+      danmakuText.value = ''
+      
+      // 增加计数
+      sentCount++
+      countText.textContent = sentCount.toString()
+    }
+    
+    // 暂停/恢复
+    function togglePause() {
+      if (!renderer) return
+      
+      if (isPaused) {
+        renderer.resume()
+      } else {
+        renderer.pause()
+      }
+    }
+    
+    // 清空所有弹幕
+    function clearAll() {
+      if (!renderer) return
+      
+      renderer.clear()
+      sentCount = 0
+      countText.textContent = '0'
+    }
+    
+    // 处理暂停事件
+    function handlePause() {
+      isPaused = true
+      statusText.textContent = '已暂停'
+      togglePauseBtn.textContent = '恢复'
+    }
+    
+    // 处理恢复事件
+    function handleResume() {
+      isPaused = false
+      statusText.textContent = '播放中'
+      togglePauseBtn.textContent = '暂停'
+    }
+    
+    // 处理弹幕点击事件
+    function handleDanmakuClick(danmaku) {
+      console.log('点击了弹幕:', danmaku)
+      alert(`点击了${danmaku.userName}的弹幕: ${danmaku.content}`)
+    }
+    
+    // 处理弹幕结束事件
+    function handleDanmakuEnd(danmaku) {
+      console.log('弹幕播放结束:', danmaku)
+    }
+    
+    // 处理容器点击事件
+    function handleContainerClick() {
+      console.log('点击了弹幕容器')
+    }
+    
+    // 生成随机颜色
+    function getRandomColor() {
+      const colors = [
+        '#FFFFFF', '#FF0000', '#00FF00', '#0000FF',
+        '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500'
+      ]
+      return colors[Math.floor(Math.random() * colors.length)]
+    }
+    
+    // 监听窗口大小变化
+    function handleResize() {
+      if (!renderer || !contentArea) return
+      
+      const { width, height } = contentArea.getBoundingClientRect()
+      renderer.updateSize(width, height)
+    }
+    
+    // 模拟接收其他用户的弹幕
+    function simulateRandomDanmaku() {
+      if (!renderer) return
+      
+      const contents = [
+        '精彩！', '太厉害了！', '666666', '这波操作我给满分',
+        '哈哈哈', '加油！', '支持！', '弹幕护体'
+      ]
+      
+      const newDanmaku = {
+        id: Date.now().toString(),
+        content: contents[Math.floor(Math.random() * contents.length)],
+        type: ['scroll', 'top', 'bottom'][Math.floor(Math.random() * 3)],
+        userId: 'user-' + Math.floor(Math.random() * 1000),
+        userName: '用户' + Math.floor(Math.random() * 1000),
+        color: getRandomColor(),
+        fontSize: 24,
+        isAdmin: Math.random() > 0.9, // 10%几率是管理员弹幕
+        timestamp: Date.now(),
+        avatar: `https://picsum.photos/32/32?random=${Math.floor(Math.random() * 1000)}`
+      }
+      
+      renderer.render(newDanmaku)
+      sentCount++
+      countText.textContent = sentCount.toString()
+    }
+    
+    // 添加事件监听器
+    function addEventListeners() {
+      sendBtn.addEventListener('click', sendDanmaku)
+      togglePauseBtn.addEventListener('click', togglePause)
+      clearBtn.addEventListener('click', clearAll)
+      window.addEventListener('resize', handleResize)
+      
+      // 键盘事件
+      danmakuText.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          sendDanmaku()
+        }
+      })
+    }
+    
+    // 初始化
+    function init() {
+      initRenderer()
+      addEventListeners()
+      
+      // 模拟随机弹幕
+      setInterval(simulateRandomDanmaku, 5000)
+    }
+    
+    // 页面加载完成后初始化
+    window.addEventListener('DOMContentLoaded', init)
+    
+    // 页面卸载时清理
+    window.addEventListener('beforeunload', () => {
+      if (renderer) {
+        renderer.destroy()
+      }
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+  "name": "danmaku-frontend",
+  "version": "1.0.0",
+  "description": "实时弹幕系统前端界面，支持多种弹幕样式、防重叠渲染和多端适配",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "danmaku",
+    "vue3",
+    "typescript",
+    "socket.io-client",
+    "vite",
+    "realtime",
+    "frontend"
+  ],
+  "author": "YinKong-online <1541310738@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YinKong-online/realtime-danmaku.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YinKong-online/realtime-danmaku/issues"
+  },
+  "homepage": "https://github.com/YinKong-online/realtime-danmaku#readme",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "type-check": "vue-tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0",
+    "danmaku-components": "file:../danmaku-components",
+    "socket.io-client": "^4.8.1",
+    "uuid": "^9.0.1",
+    "vue": "^3.4.21",
+    "vue-i18n": "^12.0.0-alpha.3",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6",
+    "vue-tsc": "^1.8.27"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
