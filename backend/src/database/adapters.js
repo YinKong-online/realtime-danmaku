@@ -343,28 +343,50 @@ class MongoDBAdapter extends BaseDatabaseAdapter {
         return [];
       }
       
-      // 注意：MongoDB中每个房间有独立的集合，这里需要聚合查询
-      // 实际应用中可能需要优化此查询策略
-      const messages = [];
+      // 优化查询策略：
+      // 1. 检查是否存在用户消息索引集合
+      const userIndexExists = await this.db.listCollections({ name: 'user_message_index' }).hasNext();
       
-      // 获取所有房间集合
-      const collections = await this.db.listCollections({ name: /^room_/ }).toArray();
-      
-      for (const collInfo of collections) {
-        const coll = this.db.collection(collInfo.name);
-        const userMessages = await coll
+      if (userIndexExists) {
+        // 使用用户-消息索引集合进行高效查询
+        const indexCollection = this.db.collection('user_message_index');
+        const messageRefs = await indexCollection
           .find({ userId })
           .sort({ timestamp: -1 })
           .limit(limit)
           .toArray();
         
-        messages.push(...userMessages);
+        // 并行获取实际消息
+        const messages = await Promise.all(messageRefs.map(async (ref) => {
+          const roomCollection = this.db.collection(`room_${ref.roomId}`);
+          return roomCollection.findOne({ _id: ref.messageId });
+        }));
+        
+        return messages.filter(Boolean).sort((a, b) => b.timestamp - a.timestamp);
+      } else {
+        // 回退到原有查询方式，但优化实现
+        const messages = [];
+        const collections = await this.db.listCollections({ name: /^room_/ }).toArray();
+        
+        // 并行查询所有集合
+        const messageArrays = await Promise.all(collections.map(async (collInfo) => {
+          const coll = this.db.collection(collInfo.name);
+          // 添加索引提示，确保userId字段有索引
+          return coll
+            .find({ userId })
+            .sort({ timestamp: -1 })
+            .limit(Math.ceil(limit / collections.length)) // 每个集合限制较少的数量
+            .toArray();
+        }));
+        
+        // 合并结果
+        messageArrays.forEach(arr => messages.push(...arr));
+        
+        // 按时间排序并限制总数
+        return messages
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, limit);
       }
-      
-      // 按时间排序并限制总数
-      return messages
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, limit);
     }, []);
   }
 

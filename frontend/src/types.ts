@@ -52,7 +52,7 @@ export interface Emoji {
   name: string;
   type: 'unicode' | 'image';
   value: string;
-  category: string;
+  category: 'emotion' | 'action' | 'object' | 'symbol';
 }
 
 // 表情包分类
